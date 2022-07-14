@@ -6,6 +6,7 @@
 #include <sys/uio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 
 #include <string>
 #include <unordered_map>
@@ -25,7 +26,7 @@ public:
         file_path_(),
         iovec_arr(),
         file_addr_(nullptr),
-        file_stat_(),
+        file_stat_({0}),
         keep_alive_(false)
     {}
 
@@ -37,7 +38,13 @@ public:
 
     HttpResponse &operator=(HttpResponse &&) = default;
 
-    ~HttpResponse() = default;
+    ~HttpResponse() {
+        if (file_addr_)
+        {
+            ::munmap(file_addr_, file_stat_.st_size);
+            file_addr_ = nullptr;
+        }
+    }
 
 public:
     void setStatusCode(int status_code) { status_code_ = status_code; }

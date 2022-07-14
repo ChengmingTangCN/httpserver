@@ -110,7 +110,8 @@ bool HttpResponse::write(int conn_sock, bool is_et)
 
             if (iovec_arr[1].iov_len == 0)
             {
-                ::munmap(iovec_arr[1].iov_base, file_stat_.st_size);
+                ::munmap(file_addr_, file_stat_.st_size);
+                file_addr_ = nullptr;
                 return true;
             }
         }

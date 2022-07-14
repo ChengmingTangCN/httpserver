@@ -56,10 +56,10 @@ private:
 
 private:
     // 读任务
-    void onRead(int sock);
+    void onRead(std::shared_ptr<HttpConn> p_http_conn);
 
     // 写任务
-    void onWrite(int sock);
+    void onWrite(std::shared_ptr<HttpConn> p_http_conn);
 
 private:
     // 服务器直接给客户端发送错误信息并关闭socket
@@ -80,7 +80,7 @@ private:
 
     uint16_t                          port_;
     int                               listen_sock_;
-    std::unordered_map<int, std::unique_ptr<HttpConn>> sock_to_http_;  // 连接socket到http连接对象的映射
+    std::unordered_map<int, std::shared_ptr<HttpConn>> sock_to_http_;  // 连接socket到http连接对象的映射
 
     std::unique_ptr<ThreadPool>       p_thread_pool_;
     std::unique_ptr<Epoller>          p_epoller_;

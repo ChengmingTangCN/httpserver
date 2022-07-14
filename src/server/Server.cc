@@ -181,8 +181,9 @@ void Server::dealRead(int sock)
     // !
     // extentTime(sock);
     // 读任务保存着一份shared_ptr<HttpConn>
-    p_thread_pool_->addTask([this, sock](){
-        onRead(sock);
+    auto p_http_conn = sock_to_http_.at(sock);
+    p_thread_pool_->addTask([this, p_http_conn](){
+        onRead(p_http_conn);
     });
 }
 
@@ -192,58 +193,47 @@ void Server::dealWrite(int sock)
     // !
     // extentTime(p_http_conn);
     // 写任务保存着一份shared_ptr<HttpConn>
-    p_thread_pool_->addTask([this, sock](){
-        onWrite(sock);
+    auto p_http_conn = sock_to_http_.at(sock);
+    p_thread_pool_->addTask([this, p_http_conn](){
+        onWrite(p_http_conn);
     });
 }
 
-void Server::onRead(int sock)
+void Server::onRead(shared_ptr<HttpConn> p_http_conn)
 {
-    if (sock_to_http_.count(sock) == 0)
-    {
-        // 执行任务时连接已关闭则直接结束任务
-        return;
-    }
-    auto &p_http_conn = sock_to_http_.at(sock);
     if (p_http_conn->processRequest())
     {
         // 请求报文处理完成, 先设置响应报文, 再注册 EPOLLOUT 事件
         p_http_conn->setResponse();
-        p_epoller_->modFd(sock, conn_epoll_events_ | EPOLLOUT);
+        p_epoller_->modFd(p_http_conn->getSock(), conn_epoll_events_ | EPOLLOUT);
     }
     else
     {
         // 请求报文没有处理完, 重新注册 EPOLLIN 事件, 防止ET模式下不会再次触发
-        p_epoller_->modFd(sock, conn_epoll_events_ | EPOLLIN);
+        p_epoller_->modFd(p_http_conn->getSock(), conn_epoll_events_ | EPOLLIN);
     }
 }
 
-void Server::onWrite(int sock)
+void Server::onWrite(shared_ptr<HttpConn> p_http_conn)
 {
-    if (sock_to_http_.count(sock) == 0)
-    {
-        // 执行任务时连接已关闭则直接结束任务
-        return;
-    }
-    auto &p_http_conn = sock_to_http_.at(sock);
     if (p_http_conn->processResponse())
     {
         if (p_http_conn->keepAlive())
         {
             // 持久连接继续监视可读事件
-            p_epoller_->modFd(sock, conn_epoll_events_ | EPOLLIN);
+            p_epoller_->modFd(p_http_conn->getSock(), conn_epoll_events_ | EPOLLIN);
         }
         else
         {
             // 释放服务器维护的shared_ptr<HttpConn>, 但可能不会立即调用::close关闭连接
             // 因为可读/可写事件中保存着一份shared_ptr<HttpConn>
-            closeHttpConnAndCancelTimer(sock);
+            closeHttpConnAndCancelTimer(p_http_conn->getSock());
         }
     }
     else
     {
         // 数据没发完, 重新注册 EPOLLOUT 事件, 防止ET模式下不会再次触发
-        p_epoller_->modFd(sock, conn_epoll_events_ | EPOLLOUT);
+        p_epoller_->modFd(p_http_conn->getSock(), conn_epoll_events_ | EPOLLOUT);
     }
 }
 
