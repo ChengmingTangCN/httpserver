@@ -11,6 +11,6 @@ add_executable(TestTimerManager TestTimerManager.cc ../src/timer/TimerManager.cc
 target_include_directories(TestTimerManager PUBLIC "../src")
 
 add_executable(Webbench webbench/webbench.c)
-target_compile_options(Webbench PUBLIC -g -o0)
+target_compile_options(Webbench PUBLIC -O2)
 
 add_executable(TestHttpConn TestHttpConn.cc)

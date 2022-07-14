@@ -17,7 +17,7 @@ target_include_directories(HttpServer PUBLIC "${PROJECT_SOUCE_DIR}")
 target_include_directories(Lib PUBLIC "${PROJECT_SOUCE_DIR}")
 target_include_directories(Lib INTERFACE "${PROJECT_SOURCE_DIR}")
 
-target_compile_options(Lib PUBLIC -pthread)
+target_compile_options(Lib PUBLIC -pthread -O2)
 target_link_options(Lib PUBLIC -pthread)
 
 target_link_libraries(HttpServer PUBLIC Lib)
