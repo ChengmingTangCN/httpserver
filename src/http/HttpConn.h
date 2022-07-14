@@ -8,28 +8,31 @@
 
 class HttpConn
 {
+public:
+      HttpConn(int conn_sock, const struct sockaddr_in &client_addr, bool is_et)
+        : conn_sock_(conn_sock),
+          client_addr_(client_addr),
+          is_et_(is_et),
+          request_(),
+          response_(),
+          keep_alive_(false)
+          {}
+
+      HttpConn(const HttpConn &) = delete;
+
+      HttpConn(HttpConn &&) = delete;
+
+      HttpConn &operator=(const HttpConn &) = delete;
+
+      HttpConn &operator=(HttpConn &&) = delete;
+
+      ~HttpConn()
+      {
+        // printf("%d closed\n", conn_sock_);
+        ::close(conn_sock_);
+      }
 
 public:
-
-    HttpConn(int conn_sock, const struct sockaddr_in &client_addr, bool is_et)
-    : conn_sock_(conn_sock),
-      client_addr_(client_addr),
-      is_et_(is_et),
-      request_()
-    {}
-
-    HttpConn(const HttpConn &) = default;
-
-    HttpConn(HttpConn &&) = default;
-
-    HttpConn &operator=(const HttpConn &) = default;
-
-    HttpConn &operator=(HttpConn &&) = default;
-
-    ~HttpConn() = default;
-
-public:
-
     // * EPOLLIN触发
     // 读数据到缓冲区, 并进行解析
     // 1. 请求报文解析成功, 将响应写入缓冲区, 返回true
@@ -50,22 +53,20 @@ public:
     void close();
 
     // 从http连接获取socket
-    int getSock() const
-    {
-      return conn_sock_;
-    }
+    int getSock() const { return conn_sock_; }
+
+    bool keepAlive() const { return keep_alive_; }
 
 private:
+    int conn_sock_;                   // 连接socket
+    struct sockaddr_in client_addr_;  // 客户端的socket地址
 
-    int conn_sock_;  // 连接socket
-    struct sockaddr_in client_addr_; // 客户端的socket地址
-
-    bool is_et_; // epoll是否工作在ET模式
+    bool is_et_;  // epoll是否工作在ET模式
 
     HttpRequest request_;
-
     HttpResponse response_;
 
+    bool keep_alive_;
 };
 
 #endif

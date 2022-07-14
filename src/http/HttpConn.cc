@@ -11,7 +11,8 @@ bool HttpConn::processRequest()
     // 请求报文解析完成
     if (request_.finished())
     {
-       return true;
+        keep_alive_ = request_.keepAlive();
+        return true;
     }
     // 请求报文没有解析完成
     else
@@ -26,6 +27,7 @@ void HttpConn::setResponse()
     assert(request_.finished());
 
     response_.setHttpVersion("HTTP/1.1");
+    response_.setKeepAlive(keepAlive());
     // 错误的请求报文
     if (request_.badRequest())
     {
@@ -45,21 +47,15 @@ void HttpConn::setResponse()
     }
     // 准备好写入
     response_.init();
-
 }
 
 bool HttpConn::processResponse()
 {
     if (response_.write(conn_sock_, is_et_))
     {
+        // 响应完成后, 重置请求
         request_.reset();
         return true;
     }
     return false;
-}
-
-// 关闭连接
-void HttpConn::close()
-{
-    ::close(conn_sock_);
 }

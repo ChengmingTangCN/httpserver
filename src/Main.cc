@@ -2,7 +2,7 @@
 
 int main()
 {
-    Server server(3333, 5);
+    Server server(3333, 6);
 
     server.run();
 

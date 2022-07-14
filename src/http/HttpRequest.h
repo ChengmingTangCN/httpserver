@@ -23,14 +23,14 @@ class HttpRequest
 public:
 
     HttpRequest()
-    : parse_state_(ParseState::REQUESTLINE),
-      buffer_(),
-      method_(),
-      path_(),
-      version_(),
-      header_(),
-      body_(),
-      is_closed_(false)
+      : parse_state_(ParseState::REQUESTLINE),
+        buffer_(),
+        method_(),
+        path_(),
+        version_(),
+        headers_(),
+        body_(),
+        is_closed_(false)
     {}
 
     HttpRequest(const HttpRequest &) = default;
@@ -50,65 +50,59 @@ public:
     // 驱动状态机执行
     void parse();
 
+    // 持久连接: 清空上一次请求的内容
+    void reset();
+
+    // 请求文件路径
+    const std::string &filePath() const { return path_; }
+
+public:
     // 请求是否解析完成
     bool finished() const
     {
-    return parse_state_ == ParseState::OK ||
-           parse_state_ == ParseState::BAD_REQUEST ||
-           parse_state_ == ParseState::UNKNOWN_ERROR;
+        return parse_state_ == ParseState::OK ||
+               parse_state_ == ParseState::BAD_REQUEST ||
+               parse_state_ == ParseState::UNKNOWN_ERROR;
     }
 
-    bool badRequest() const
-    {
-        return parse_state_ == ParseState::BAD_REQUEST;
-    }
+    // 请求报文是否有误
+    bool badRequest() const { return parse_state_ == ParseState::BAD_REQUEST; }
 
-    bool unknownError() const
+    // 服务器出现未知错误
+    bool unknownError() const { return parse_state_ == ParseState::UNKNOWN_ERROR; }
 
+    // 请求报文是否请求持久连接
+    bool keepAlive() const
     {
-        return parse_state_ == ParseState::UNKNOWN_ERROR;
-    }
-
-    const std::string &filePath() const
-    {
-        return path_;
-    }
-
-    // 持久连接: 清空上一次请求的内容
-    void reset()
-    {
-        parse_state_ = ParseState::REQUESTLINE;
-        method_.clear();
-        path_.clear();
-        version_.clear();
-        header_.clear();
-        body_.clear();
+        return headers_.count("Connection") &&
+               (headers_.at("Connection") == "keep-alive");
     }
 
 private:
-
+    // 解析请求首行
     void parseRequestLine(const std::string &line);
 
+    // 解析请求头
     void parseHeader(const std::string &line);
 
+    // 解析请求体
     void parseBody(const std::string &line);
 
     void getHttpLine();
 
 private:
-
     ParseState parse_state_;
 
-    Buffer buffer_;  // 读缓冲区
+    Buffer buffer_;
 
     std::string method_;
     std::string path_;
     std::string version_;
 
-    std::unordered_map<std::string, std::string> header_;  // 请求头
-    std::string body_;  // 请求体
+    std::unordered_map<std::string, std::string> headers_;
+    std::string body_;
 
-    bool is_closed_; // 对端关闭或者关闭了写方向
+    bool is_closed_;  // 对端关闭或者关闭了写方向
 };
 
 #endif

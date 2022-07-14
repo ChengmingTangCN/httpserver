@@ -9,9 +9,9 @@
 class Epoller
 {
 public:
-
     explicit Epoller(int max_ep_events = 1024)
-    : epfd_(::epoll_create1(0)), ep_events_ret_(1024) {}
+      : epfd_(::epoll_create1(0)),
+        ep_events_ret_(1024) {}
 
     Epoller(const Epoller &) = delete;
 
@@ -21,11 +21,12 @@ public:
 
     Epoller &operator=(Epoller &&) = default;
 
-    ~Epoller() noexcept
+    ~Epoller()
     {
         ::close(epfd_);
     }
 
+public:
     bool addFd(int fd, uint32_t events);
 
     bool modFd(int fd, uint32_t events);
@@ -39,7 +40,6 @@ public:
     uint32_t getEventsOf(int idx) const;
 
 private:
-
     int epfd_;
 
     std::vector<struct epoll_event> ep_events_ret_;

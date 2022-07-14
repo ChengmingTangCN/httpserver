@@ -8,7 +8,10 @@
 
 #include <cstdio>
 
-std::unordered_map<int, std::string> HttpResponse::code_to_text = {
+using std::string;
+using std::unordered_map;
+
+unordered_map<int, string> HttpResponse::code_to_text = {
     {200, "OK"},
     {400, "Bad Request"},
     {403, "Forbidden"},
@@ -16,7 +19,7 @@ std::unordered_map<int, std::string> HttpResponse::code_to_text = {
     {500, "Internal Server Error"},
 };
 
-std::unordered_map<std::string, std::string> HttpResponse::suffix_to_type = {
+unordered_map<string, string> HttpResponse::suffix_to_type = {
     {"html", "text/html"},
     {"jpeg", "image/jpeg"},
     {"jpg", "image/jpg"},
@@ -26,53 +29,49 @@ std::unordered_map<std::string, std::string> HttpResponse::suffix_to_type = {
 // 生成HTTP报文将其写入缓冲区
 void HttpResponse::init()
 {
-    // 请求报文解析成功
-    if (status_code_ == 200)
+    while (true)
     {
+        if (status_code_ != 200)
+        {
+            break;
+        }
         int fd = ::open(file_path_.data(), O_RDONLY);
         if (fd < 0)
         {
-            // ::perror("::open()");
-            // printf("%s\n", file_path_.data());
             status_code_ = 400;
+            break;
         }
-        else
+        fstat(fd, &file_stat_);
+
+        if(!S_ISREG(file_stat_.st_mode))
         {
-            fstat(fd, &file_stat_);
-
-            if(!S_ISREG(file_stat_.st_mode))
-            {
-                status_code_ = 400;
-            }
-            else
-            {
-                file_addr_ = ::mmap(nullptr, file_stat_.st_size,
-                                    PROT_READ, MAP_PRIVATE, fd, 0);
-                if (file_addr_ == MAP_FAILED)
-                {
-                    ::perror("::mmap()");
-                    status_code_ = 500;
-                }
-
-                addStatusLine();
-                setHeader("Content-Length", std::to_string(file_stat_.st_size));
-                auto file_type = getFileType();
-                setHeader("Content-Type", file_type);
-                setHeader("Connection", "keep-alive");
-                addHeaders();
-                addCrlf();
-
-                iovec_arr[0].iov_base = const_cast<char *>(buffer_.peek());
-                iovec_arr[0].iov_len = buffer_.readableBytes();
-                iovec_arr[1].iov_base = file_addr_;
-                iovec_arr[1].iov_len = file_stat_.st_size;
-                ::close(fd);
-                return;
-            }
+            status_code_ = 400;
+            break;
+        }
+        file_addr_ = ::mmap(nullptr, file_stat_.st_size,
+                            PROT_READ, MAP_PRIVATE, fd, 0);
+        if (file_addr_ == MAP_FAILED)
+        {
+            ::perror("::mmap()");
+            status_code_ = 500;
+            break;
         }
         ::close(fd);
+
+        addStatusLine();
+        setHeader("Content-Length", std::to_string(file_stat_.st_size));
+        setHeader("Content-Type", getFileType());
+        setHeader("Connection", keep_alive_ ? "keep-alive" : "close");
+        addHeaders();
+        addCrlfLine();
+
+        iovec_arr[0].iov_base = const_cast<char *>(buffer_.peek());
+        iovec_arr[0].iov_len = buffer_.readableBytes();
+        iovec_arr[1].iov_base = file_addr_;
+        iovec_arr[1].iov_len = file_stat_.st_size;
+        return;
     }
-    // * 请求没有成功, 生成格式一致的响应报文
+    // * 请求没有成功, 生成异常响应报文
     handleExceptStatus();
 }
 
@@ -93,7 +92,7 @@ bool HttpResponse::write(int conn_sock, bool is_et)
             break;
         }
         // 只发送了buffer_的数据
-        if (write_len < iovec_arr[0].iov_len)
+        if (write_len <= iovec_arr[0].iov_len)
         {
             buffer_.retrieve(write_len);
             iovec_arr[0].iov_base = const_cast<char *>(buffer_.peek());
@@ -102,18 +101,67 @@ bool HttpResponse::write(int conn_sock, bool is_et)
         // 发送了文件数据
         else
         {
-            iovec_arr[1].iov_base = static_cast<char *>(file_addr_) + write_len - iovec_arr[0].iov_len;
-            iovec_arr[1].iov_len -= write_len - iovec_arr[0].iov_len;
+            int send_file_len = write_len - iovec_arr[0].iov_len;
+            iovec_arr[1].iov_base = static_cast<char *>(file_addr_) + send_file_len;
+            iovec_arr[1].iov_len -= send_file_len;
+
             buffer_.retrieve(iovec_arr[0].iov_len);
-            iovec_arr[0].iov_base = nullptr;
             iovec_arr[0].iov_len = 0;
+
             if (iovec_arr[1].iov_len == 0)
             {
                 ::munmap(iovec_arr[1].iov_base, file_stat_.st_size);
                 return true;
             }
         }
-
     } while (is_et);
     return false;
+}
+
+void HttpResponse::handleExceptStatus()
+{
+    auto content = getHtmlString(code_to_text[status_code_]);
+    addStatusLine();
+    setHeader("Connection", keep_alive_ ? "keep-alive" : "close");
+    setHeader("Content-Length", std::to_string(content.size()));
+    setHeader("Content-Type", "text/html");
+    addHeaders();
+    addCrlfLine();
+    addContent(content);
+
+    iovec_arr[0].iov_base = const_cast<char *>(buffer_.peek());
+    iovec_arr[0].iov_len = buffer_.readableBytes();
+    iovec_arr[1].iov_base = nullptr;
+    iovec_arr[1].iov_len = 0;
+}
+
+// 根据文件后缀名获取文件类型
+string HttpResponse::getFileType() const
+{
+    auto pos = file_path_.find_last_of('.');
+    if (pos == std::string::npos)
+    {
+        return "";
+    }
+    auto suffix = file_path_.substr(pos + 1);
+    if (suffix_to_type.count(suffix))
+    {
+        return suffix_to_type[suffix];
+    }
+    return "";
+}
+
+// 生成简单的HTML页面
+std::string HttpResponse::getHtmlString(const std::string &content)
+{
+    return "<html>"
+            "  <head>"
+            "    <title>"
+            "      Http Server"
+            "    </title>"
+            "  </head>"
+            "  <body>"
+            + content +
+            "  </body>"
+            "</html>";
 }

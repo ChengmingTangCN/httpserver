@@ -97,7 +97,6 @@ static void usage(void)
         "  -?|-h|--help             This information.\n"
         "  -V|--version             Display program version.\n");
 };
-
 int main(int argc, char *argv[])
 {
     int opt = 0;
@@ -124,19 +123,19 @@ int main(int argc, char *argv[])
                 force_reload = 1;
                 break;
             case '9':
-                http10 = 0;  // HTTP/0.9
+                http10 = 0;
                 break;
             case '1':
-                http10 = 1;  // HTTP/1.0
+                http10 = 1;
                 break;
             case '2':
-                http10 = 2;  // HTTP/1.1
+                http10 = 2;
                 break;
             case 'V':
                 printf(PROGRAM_VERSION "\n");
                 exit(0);
             case 't':
-                benchtime = atoi(optarg);  // 测试时间
+                benchtime = atoi(optarg);
                 break;
             case 'p':
                 /* proxy server parsing server:port */
@@ -171,7 +170,7 @@ int main(int argc, char *argv[])
                 return 2;
                 break;
             case 'c':
-                clients = atoi(optarg);  // 客户端数目
+                clients = atoi(optarg);
                 break;
         }
     }
@@ -185,16 +184,12 @@ int main(int argc, char *argv[])
 
     if (clients == 0) clients = 1;
     if (benchtime == 0) benchtime = 60;
-
     /* Copyright */
     fprintf(stderr,
             "Webbench - Simple Web Benchmark " PROGRAM_VERSION
             "\n"
             "Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.\n");
-
-    // 构建HTTP请求报文
     build_request(argv[optind]);
-
     /* print bench info */
     printf("\nBenchmarking: ");
     switch (method)
@@ -213,7 +208,6 @@ int main(int argc, char *argv[])
             printf("TRACE");
             break;
     }
-
     printf(" %s", argv[optind]);
     switch (http10)
     {
@@ -225,14 +219,12 @@ int main(int argc, char *argv[])
             break;
     }
     printf("\n");
-
     if (clients == 1)
         printf("1 client");
     else
         printf("%d clients", clients);
 
     printf(", running %d sec", benchtime);
-
     if (force) printf(", early socket close");
     if (proxyhost != NULL)
         printf(", via proxy server %s:%d", proxyhost, proxyport);
@@ -507,6 +499,7 @@ nexttry:
             /* read all available data from socket */
             while (1)
             {
+                // printf("pid: %d111111\n", getpid());
                 if (timerexpired) break;
                 i = read(s, buf, 1500);
                 /* fprintf(stderr,"%d\n",i); */
@@ -524,9 +517,11 @@ nexttry:
         }
         if (close(s))
         {
+            // printf("pid: %d2222222\n", getpid());
             failed++;
             continue;
         }
+        // printf("pid: %d33333333\n", getpid());
         speed++;
     }
 }

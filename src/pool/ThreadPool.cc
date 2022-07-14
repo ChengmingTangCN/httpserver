@@ -2,9 +2,9 @@
 
 void ThreadPool::threadFunc()
 {
-    std::function<void()> task;
     while (true)
     {
+        std::function<void()> task;
         // 缩小临界区
         {
             std::unique_lock<std::mutex> guard(lock_);

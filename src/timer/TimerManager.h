@@ -58,42 +58,23 @@ public:
     void checkAndHandleTimer();
 
 private:
+    void popAndRunCallBack();
 
     void swap(int i, int j);
 
+private:
     void siftDown(int i);
 
     void siftUp(int i);
 
-    int leftChild(int node) const
-    {
-        return node * 2 + 1;
-    }
+private:
+    int leftChild(int node) const { return node * 2 + 1; }
 
-    int rightChild(int node) const
-    {
-        return node * 2 + 2;
-    }
+    int rightChild(int node) const { return node * 2 + 2; }
 
-    int parent(int node) const
-    {
-        return (node - 1) / 2;
-    }
+    int parent(int node) const { return (node - 1) / 2; }
 
-    void pop()
-    {
-        assert(!container_.empty());
-        swap(0, container_.size() - 1);
-        int fd = container_.back().fd;
-        fd_to_pos_.erase(fd);
-        container_.back().callback();
-        container_.pop_back();
-        if (container_.size() > 0)
-        {
-            siftDown(0);
-        }
-    }
-
+private:
     std::vector<Timer> container_;
 
     std::unordered_map<int, int> fd_to_pos_;  // 定时器fd映射到container_下标

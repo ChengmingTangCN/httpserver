@@ -11,7 +11,7 @@ void TimerManager::add(int fd, time_t expire_time, const TimeOutCallBack &callba
 
 void TimerManager::cancel(int fd)
 {
-    assert(fd_to_pos_.count(fd) == 1);
+    assert(fd_to_pos_.count(fd) > 0);
     int pos = fd_to_pos_[fd];
     swap(pos, container_.size() - 1);
     container_.pop_back();
@@ -58,19 +58,36 @@ void TimerManager::checkAndHandleTimer()
         {
             break;
         }
-        pop();
+        popAndRunCallBack();
     }
 }
 
 void TimerManager::swap(int i, int j)
 {
     using std::swap;
-    int fd_i = container_[i].fd, fd_j = container_[j].fd;
+    // int fd_i = container_[i].fd, fd_j = container_[j].fd;
     swap(container_[i], container_[j]);
-    fd_to_pos_[fd_i] = j;
-    fd_to_pos_[fd_j] = i;
+    // fd_to_pos_[fd_i] = j;
+    // fd_to_pos_[fd_j] = i;
+    fd_to_pos_[container_[i].fd] = i;
+    fd_to_pos_[container_[j].fd] = j;
 }
 
+void TimerManager::popAndRunCallBack()
+{
+    assert(!container_.empty());
+    swap(0, container_.size() - 1);
+
+    int fd = container_.back().fd;
+    fd_to_pos_.erase(fd);
+    container_.back().callback();
+    container_.pop_back();
+
+    if (container_.size() > 0)
+    {
+        siftDown(0);
+    }
+}
 void TimerManager::siftDown(int i)
 {
     assert(i < container_.size());

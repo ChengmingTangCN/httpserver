@@ -5,7 +5,7 @@
 
 bool Epoller::addFd(int fd, uint32_t events)
 {
-    struct epoll_event ep_event;
+    struct epoll_event ep_event = {0};
     ep_event.data.fd = fd;
     ep_event.events = events;
     int ret = ::epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ep_event);
@@ -15,7 +15,7 @@ bool Epoller::addFd(int fd, uint32_t events)
 bool Epoller::modFd(int fd, uint32_t events)
 {
     assert(fd >= 0);
-    struct epoll_event ep_event;
+    struct epoll_event ep_event = {0};
     ep_event.data.fd = fd;
     ep_event.events = events;
     int ret = ::epoll_ctl(epfd_, EPOLL_CTL_MOD, fd, &ep_event);
