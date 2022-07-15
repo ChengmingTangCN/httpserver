@@ -7,6 +7,7 @@
 #include <functional>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
 
 using TimeOutCallBack = std::function<void()>;
 
@@ -17,9 +18,9 @@ struct Timer
     TimeOutCallBack callback;  // 回调函数
 
     Timer(int fd, time_t expire_time, const TimeOutCallBack &callback)
-    : fd(fd),
-      expire_time(expire_time),
-      callback(callback)
+      : fd(fd),
+        expire_time(expire_time),
+        callback(callback)
     {}
 
     bool operator<(const Timer &other)
@@ -34,13 +35,13 @@ public:
 
     TimerManager() = default;
 
-    TimerManager(const TimerManager &) = default;
+    TimerManager(const TimerManager &) = delete;
 
-    TimerManager(TimerManager &&) = default;
+    TimerManager(TimerManager &&) = delete;
 
-    TimerManager &operator=(const TimerManager &) = default;
+    TimerManager &operator=(const TimerManager &) = delete;
 
-    TimerManager &operator=(TimerManager &&) = default;
+    TimerManager &operator=(TimerManager &&) = delete;
 
     ~TimerManager() = default;
 
@@ -78,6 +79,8 @@ private:
     std::vector<Timer> container_;
 
     std::unordered_map<int, int> fd_to_pos_;  // 定时器fd映射到container_下标
+
+    mutable std::mutex lock_;
 };
 
 #endif

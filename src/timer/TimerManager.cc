@@ -1,8 +1,12 @@
 #include <timer/TimerManager.h>
 #include <cassert>
 
+using std::unique_lock;
+using std::mutex;
+
 void TimerManager::add(int fd, time_t expire_time, const TimeOutCallBack &callback)
 {
+    unique_lock<mutex> guard(lock_);
     assert(fd_to_pos_.count(fd) == 0);
     container_.emplace_back(fd, expire_time, callback);
     fd_to_pos_[fd] = container_.size() - 1;
@@ -11,7 +15,11 @@ void TimerManager::add(int fd, time_t expire_time, const TimeOutCallBack &callba
 
 void TimerManager::cancel(int fd)
 {
-    assert(fd_to_pos_.count(fd) > 0);
+    unique_lock<mutex> guard(lock_);
+    if (fd_to_pos_.count(fd) == 0)
+    {
+        return;
+    }
     int pos = fd_to_pos_[fd];
     swap(pos, container_.size() - 1);
     container_.pop_back();
@@ -24,14 +32,16 @@ void TimerManager::cancel(int fd)
 
 void TimerManager::adjustTime(int fd, time_t expire_time)
 {
+    unique_lock<mutex> guard(lock_);
     assert(fd_to_pos_.count(fd) == 1);
     container_[fd_to_pos_[fd]].expire_time = expire_time;
-    siftUp(fd_to_pos_[fd]);
+    // siftUp(fd_to_pos_[fd]);
     siftDown(fd_to_pos_[fd]);
 }
 
 int TimerManager::millisecondsToNextExpired() const
 {
+    unique_lock<mutex> guard(lock_);
     int res = -1;
     if (!container_.empty())
     {
@@ -51,6 +61,7 @@ int TimerManager::millisecondsToNextExpired() const
 
 void TimerManager::checkAndHandleTimer()
 {
+    unique_lock<mutex> guard(lock_);
     time_t now = ::time(nullptr);
     while (!container_.empty())
     {
@@ -64,6 +75,8 @@ void TimerManager::checkAndHandleTimer()
 
 void TimerManager::swap(int i, int j)
 {
+    assert(i < container_.size());
+    assert(j < container_.size());
     using std::swap;
     // int fd_i = container_[i].fd, fd_j = container_[j].fd;
     swap(container_[i], container_[j]);
@@ -88,6 +101,7 @@ void TimerManager::popAndRunCallBack()
         siftDown(0);
     }
 }
+
 void TimerManager::siftDown(int i)
 {
     assert(i < container_.size());

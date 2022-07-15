@@ -6,31 +6,33 @@
 
 #include <arpa/inet.h>
 
+#include <functional>
+#include <mutex>
+
 class HttpConn
 {
 public:
-      HttpConn(int conn_sock, const struct sockaddr_in &client_addr, bool is_et)
-        : conn_sock_(conn_sock),
-          client_addr_(client_addr),
-          is_et_(is_et),
-          request_(),
-          response_(),
-          keep_alive_(false)
-          {}
+    HttpConn(int conn_sock, const struct sockaddr_in &client_addr, bool is_et)
+      : conn_sock_(conn_sock),
+        client_addr_(client_addr),
+        is_et_(is_et),
+        request_(),
+        response_(),
+        keep_alive_(false)
+        {}
 
-      HttpConn(const HttpConn &) = delete;
+    HttpConn(const HttpConn &) = delete;
 
-      HttpConn(HttpConn &&) = delete;
+    HttpConn(HttpConn &&) = delete;
 
-      HttpConn &operator=(const HttpConn &) = delete;
+    HttpConn &operator=(const HttpConn &) = delete;
 
-      HttpConn &operator=(HttpConn &&) = delete;
+    HttpConn &operator=(HttpConn &&) = delete;
 
-      ~HttpConn()
-      {
-        // printf("%d closed\n", conn_sock_);
-        ::close(conn_sock_);
-      }
+    ~HttpConn()
+    {
+        close_callback_();
+    }
 
 public:
     // * EPOLLIN触发
@@ -49,8 +51,8 @@ public:
     // 2. 没有发送完, 返回false
     bool processResponse();
 
-    // 关闭连接
-    void close();
+    // 注册关闭HTTP连接时的回调函数
+    void registerCloseCallBack(const std::function<void()> &callback) { close_callback_ = callback; }
 
     // 从http连接获取socket
     int getSock() const { return conn_sock_; }
@@ -67,6 +69,8 @@ private:
     HttpResponse response_;
 
     bool keep_alive_;
+
+    std::function<void()> close_callback_;
 };
 
 #endif

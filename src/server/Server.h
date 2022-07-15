@@ -51,9 +51,6 @@ private:
     // 删除Server维护的某个Http连接实例
     void closeHttpConn(int sock);
 
-    // 删除Server维护的某个Http连接实例并取消对应定时器
-    void closeHttpConnAndCancelTimer(int sock);
-
 private:
     // 读任务
     void onRead(std::shared_ptr<HttpConn> p_http_conn);

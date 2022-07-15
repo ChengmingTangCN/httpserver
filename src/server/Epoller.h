@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <vector>
+#include <mutex>
 
 class Epoller
 {
@@ -15,11 +16,11 @@ public:
 
     Epoller(const Epoller &) = delete;
 
-    Epoller(Epoller &&) = default;
+    Epoller(Epoller &&) = delete;
 
     Epoller &operator=(const Epoller &) = delete;
 
-    Epoller &operator=(Epoller &&) = default;
+    Epoller &operator=(Epoller &&) = delete;
 
     ~Epoller()
     {
@@ -43,6 +44,8 @@ private:
     int epfd_;
 
     std::vector<struct epoll_event> ep_events_ret_;
+
+    mutable std::mutex lock_;
 };
 
 #endif

@@ -69,11 +69,8 @@ void Server::run()
             // 连接socket出错
             else if(events & EPOLLERR || events & EPOLLRDHUP || events & EPOLLHUP)
             {
-                // 移除定时器
-                // !
-                // timer_manager_.cancel(fd);
                 // 关闭HTTP连接
-                closeHttpConnAndCancelTimer(fd);
+                closeHttpConn(fd);
             }
             else if(events & EPOLLIN)
             {
@@ -179,7 +176,7 @@ void Server::dealRead(int sock)
 {
     // 延迟定时器的过期时间
     // !
-    // extentTime(sock);
+    extentTime(sock);
     // 读任务保存着一份shared_ptr<HttpConn>
     auto p_http_conn = sock_to_http_.at(sock);
     p_thread_pool_->addTask([this, p_http_conn](){
@@ -191,7 +188,7 @@ void Server::dealWrite(int sock)
 {
     // 延迟定时器的过期时间
     // !
-    // extentTime(p_http_conn);
+    extentTime(sock);
     // 写任务保存着一份shared_ptr<HttpConn>
     auto p_http_conn = sock_to_http_.at(sock);
     p_thread_pool_->addTask([this, p_http_conn](){
@@ -227,7 +224,7 @@ void Server::onWrite(shared_ptr<HttpConn> p_http_conn)
         {
             // 释放服务器维护的shared_ptr<HttpConn>, 但可能不会立即调用::close关闭连接
             // 因为可读/可写事件中保存着一份shared_ptr<HttpConn>
-            closeHttpConnAndCancelTimer(p_http_conn->getSock());
+            closeHttpConn(p_http_conn->getSock());
         }
     }
     else
@@ -239,29 +236,23 @@ void Server::onWrite(shared_ptr<HttpConn> p_http_conn)
 
 void Server::addHttpConn(int conn_sock, const struct sockaddr_in &client_addr)
 {
-#if 0
     timer_manager_.add(conn_sock, ::time(nullptr) + CHECK_CONN_TIME_SLOT_SECONDS,
                        [this, conn_sock](){
                            closeHttpConn(conn_sock);
                        });
-#endif
     sock_to_http_.emplace(conn_sock, new HttpConn(conn_sock, client_addr, conn_epoll_events_ & EPOLLET));
     p_epoller_->addFd(conn_sock, EPOLLIN | conn_epoll_events_);
+    sock_to_http_.at(conn_sock)->registerCloseCallBack([this, conn_sock](){
+        p_epoller_->delFd(conn_sock);
+        timer_manager_.cancel(conn_sock);
+        ::close(conn_sock);
+    });
     setNonBlocking(conn_sock);
 }
 
 void Server::closeHttpConn(int sock)
 {
-    // fprintf(stdout, "close socket #%d\n", sock);
-    p_epoller_->delFd(sock);
     sock_to_http_.erase(sock);
-}
-
-void Server::closeHttpConnAndCancelTimer(int sock)
-{
-    closeHttpConn(sock);
-    // !
-    // timer_manager_.cancel(sock);
 }
 
 void Server::sendError(int sock, const std::string &msg)
