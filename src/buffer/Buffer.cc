@@ -41,8 +41,10 @@ ssize_t Buffer::writeFd(int fd, int *save_errno)
     {
         *save_errno = errno;
     }
-
-    read_pos_ += write_len;
+    else
+    {
+        read_pos_ += write_len;
+    }
     return write_len;
 }
 
@@ -58,17 +60,19 @@ void Buffer::retrieve(int len)
 
 void Buffer::append(const char *ptr, int len)
 {
-    if (writableBytes() < len && writableBytes() + prependableBytes() >= len)
+    if (writableBytes() < len)
     {
-        int prependable_bytes = prependableBytes();
-        // 消除前面的空闲内存
-        std::copy(beginRead(), beginWrite(), begin());
-        read_pos_ = 0;
-        write_pos_ -= prependable_bytes;
-    }
-    else if (writableBytes() + prependableBytes() < len)
-    {
-        buffer_.resize(write_pos_ + len);
+        if (writableBytes() + prependableBytes() >= len)
+        {
+            // 消除前面的空闲内存, 不需要扩容
+            std::copy(beginRead(), beginWrite(), begin());
+            write_pos_ -= prependableBytes();
+            read_pos_ = 0;
+        }
+        else
+        {
+            buffer_.resize(write_pos_ + len);
+        }
     }
 
     std::copy(ptr, ptr + len, beginWrite());

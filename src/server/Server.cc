@@ -175,7 +175,6 @@ void Server::dealListen()
 void Server::dealRead(int sock)
 {
     // 延迟定时器的过期时间
-    // !
     extentTime(sock);
     // 读任务保存着一份shared_ptr<HttpConn>
     auto p_http_conn = sock_to_http_.at(sock);
@@ -187,7 +186,6 @@ void Server::dealRead(int sock)
 void Server::dealWrite(int sock)
 {
     // 延迟定时器的过期时间
-    // !
     extentTime(sock);
     // 写任务保存着一份shared_ptr<HttpConn>
     auto p_http_conn = sock_to_http_.at(sock);
@@ -240,7 +238,7 @@ void Server::addHttpConn(int conn_sock, const struct sockaddr_in &client_addr)
                        [this, conn_sock](){
                            closeHttpConn(conn_sock);
                        });
-    sock_to_http_.emplace(conn_sock, new HttpConn(conn_sock, client_addr, conn_epoll_events_ & EPOLLET));
+    sock_to_http_.emplace(conn_sock, make_shared<HttpConn>(conn_sock, client_addr, conn_epoll_events_ & EPOLLET));
     p_epoller_->addFd(conn_sock, EPOLLIN | conn_epoll_events_);
     sock_to_http_.at(conn_sock)->registerCloseCallBack([this, conn_sock](){
         p_epoller_->delFd(conn_sock);
