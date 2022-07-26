@@ -89,31 +89,41 @@ bool HttpResponse::write(int conn_sock, bool is_et)
             }
             // todo: 处理其它错误
             ::perror("::writev()");
-            break;
+            return true;
         }
-        // 只发送了buffer_的数据
-        if (write_len <= iovec_arr[0].iov_len)
+        // 更新 iovec_arr[0]
+        auto buffer_len = iovec_arr[0].iov_len;
+        if (iovec_arr[0].iov_len > 0)
         {
-            buffer_.retrieve(write_len);
-            iovec_arr[0].iov_base = const_cast<char *>(buffer_.peek());
-            iovec_arr[0].iov_len -= write_len;
+            if (write_len >= iovec_arr[0].iov_len)
+            {
+                buffer_.retrieve(buffer_len);
+                iovec_arr[0].iov_len = 0;
+                iovec_arr[0].iov_base = nullptr;
+            }
+            else
+            {
+                buffer_.retrieve(write_len);
+                iovec_arr[0].iov_len -= write_len;
+                iovec_arr[0].iov_base = const_cast<char *>(buffer_.peek());
+            }
         }
-        // 发送了文件数据
-        else
+        // 更新 iovec_arr[1]
+        if (buffer_len < write_len)
         {
-            int send_file_len = write_len - iovec_arr[0].iov_len;
-            iovec_arr[1].iov_base = static_cast<char *>(file_addr_) + send_file_len;
-            iovec_arr[1].iov_len -= send_file_len;
-
-            buffer_.retrieve(iovec_arr[0].iov_len);
-            iovec_arr[0].iov_len = 0;
-
+            iovec_arr[1].iov_len  -= write_len - buffer_len;
+            iovec_arr[1].iov_base = static_cast<char *>(iovec_arr[1].iov_base) +
+                                    write_len - buffer_len;
             if (iovec_arr[1].iov_len == 0)
             {
-                ::munmap(file_addr_, file_stat_.st_size);
+                munmap(file_addr_, file_stat_.st_size);
                 file_addr_ = nullptr;
-                return true;
             }
+        }
+        if (iovec_arr[0].iov_len == 0 && iovec_arr[1].iov_len == 0)
+        {
+            // 数据全部发送完
+            return true;
         }
     } while (is_et);
     return false;
