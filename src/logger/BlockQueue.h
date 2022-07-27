@@ -1,6 +1,7 @@
 #ifndef HTTPSERVER_LOGGER_BLOCK_QUEUE
 #define HTTPSERVER_LOGGER_BLOCK_QUEUE
 
+#include <cassert>
 #include <mutex>
 #include <condition_variable>
 #include <queue>
@@ -9,7 +10,7 @@ template <typename T>
 class BlockQueue
 {
 public:
-    explicit BlockQueue(int capacity = 1024)
+    explicit BlockQueue(int capacity = 0)
       : queue_(),
         capacity_(capacity),
         stopped_(false),
@@ -78,6 +79,12 @@ public:
     {
         std::lock_guard<std::mutex> guard(lock_);
         return unlockedFull();
+    }
+
+    void setCapactity(int capacity)
+    {
+        assert(capacity >= capacity_);
+        capacity_ = capacity;
     }
 
 private:

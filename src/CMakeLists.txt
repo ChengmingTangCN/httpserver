@@ -11,6 +11,7 @@ add_library(Lib buffer/Buffer.cc
                 http/HttpConn.cc http/HttpRequest.cc http/HttpResponse.cc
                 pool/ThreadPool.cc
                 timer/TimerManager.cc
+                logger/AsyncLogger.cc
                 server/Epoller.cc server/Server.cc)
 
 target_include_directories(HttpServer PUBLIC "${PROJECT_SOUCE_DIR}")
