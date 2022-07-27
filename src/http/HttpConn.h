@@ -60,17 +60,24 @@ public:
     bool keepAlive() const { return keep_alive_; }
 
 private:
-    int conn_sock_;                   // 连接socket
-    struct sockaddr_in client_addr_;  // 客户端的socket地址
+    static void setResourcesPath(const std::string &path);
 
-    bool is_et_;  // epoll是否工作在ET模式
+    static std::string getDefaultResourcesPath();
+
+private:
+    static std::string resources_path_;  // 静态资源目录
+
+    int conn_sock_;                     // 连接socket
+    struct sockaddr_in client_addr_;    // 客户端的socket地址
+
+    bool is_et_;                        // 从socket读写数据时是否一次读完/写完
 
     HttpRequest request_;
     HttpResponse response_;
 
     bool keep_alive_;
 
-    std::function<void()> close_callback_;
+    std::function<void()> close_callback_;  // 关闭连接时的回调函数
 };
 
 #endif

@@ -1,7 +1,29 @@
 #include "http/HttpRequest.h"
 #include <http/HttpConn.h>
 
+#include <linux/limits.h>
+
 #include <cassert>
+#include <string>
+
+using std::string;
+
+string HttpConn::resources_path_ = getDefaultResourcesPath();
+
+string HttpConn::getDefaultResourcesPath()
+{
+    char cur_path[PATH_MAX];
+    char *ret = getcwd(cur_path, PATH_MAX);
+    assert(ret);
+    string res = cur_path;
+    res += "/../resources";
+    return res;
+}
+
+void HttpConn::setResourcesPath(const string &path)
+{
+    resources_path_ = path;
+}
 
 // 读取数据到缓冲区, 并根据缓冲区中的数据解析报文
 bool HttpConn::processRequest()
@@ -40,10 +62,10 @@ void HttpConn::setResponse()
     }
     else
     {
-        response_.setStatusCode(200);
         // 请求报文没有问题, 则由Response生成响应
+        response_.setStatusCode(200);
         // ! 如何保证 request_.filepath() 不会通过 .. 访问上级目录
-        response_.setFilePath("/home/cmtang/project/httpserver/resources" + request_.filePath());
+        response_.setFilePath(resources_path_ + request_.filePath());
     }
     // 准备好写入
     response_.init();
