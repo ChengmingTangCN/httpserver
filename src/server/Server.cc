@@ -124,7 +124,6 @@ bool Server::initListenSock()
         return false;
     }
 
-
     // 绑定地址
     struct sockaddr_in server_addr = {0};
     server_addr.sin_family = AF_INET;
