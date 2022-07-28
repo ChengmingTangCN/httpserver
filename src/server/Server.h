@@ -41,6 +41,8 @@ private:
     // 初始化监听socket
     bool initListenSock();
 
+    bool initSignalHandler();
+
 private:
     // 处理监听socket的可读事件
     void handleAccept();

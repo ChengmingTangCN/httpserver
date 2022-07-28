@@ -5,7 +5,7 @@ int main()
 {
     Server server(3333,
                   6,
-                  true, LogLevel::DEBUG, "./log",
+                  false, LogLevel::DEBUG, "./log",
                   ".log", 5000, 1024);
 
     server.run();

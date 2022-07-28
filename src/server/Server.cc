@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include <cstring>
 #include <string>
@@ -47,7 +48,7 @@ Server::Server(uint16_t port,
     LOG_INFO("socket events inited");
 
     // 创建监听socket
-    if (initListenSock())
+    if (initSignalHandler() && initListenSock())
     {
         LOG_INFO("listen socket create successfully");
         is_running_ = true;
@@ -168,6 +169,19 @@ bool Server::initListenSock()
         return false;
     }
 
+    return true;
+}
+
+bool Server::initSignalHandler()
+{
+    struct sigaction act;
+    act.sa_handler = SIG_IGN;
+    int err = sigaction(SIGPIPE, &act, nullptr);
+    if (err)
+    {
+        LOG_FATAL("sigaction(): %s", strerror(errno));
+        return false;
+    }
     return true;
 }
 

@@ -19,7 +19,7 @@ void doLog()
 int main()
 {
     auto &logger = AsyncLogger::getInstance();
-    logger.init("./log", ".log", 1000, 1024);
+    logger.init(LogLevel::DEBUG, "./log", ".log", 1000, 1024);
     thread t1(doLog), t2(doLog), t3(doLog);
 
     t1.join();

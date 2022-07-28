@@ -1,10 +1,13 @@
 #include <http/HttpResponse.h>
+#include <logger/AsyncLogger.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <cerrno>
+#include <cstring>
 
 #include <cstdio>
 
@@ -87,8 +90,7 @@ bool HttpResponse::write(int conn_sock, bool is_et)
             {
                 break;
             }
-            // todo: 处理其它错误
-            ::perror("::writev()");
+            LOG_ERROR("client:%d writev(): %s", conn_sock, strerror(errno));
             return true;
         }
         // 更新 iovec_arr[0]
