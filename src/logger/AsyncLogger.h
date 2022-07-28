@@ -48,7 +48,7 @@ public:
     }
 
     // 初始化logger
-    void init(const std::string &log_path, const std::string &log_filename,
+    void init(LogLevel filter_level, const std::string &log_path, const std::string &log_filename,
               int file_max_line, int block_queue_size);
 
     // 输出日志
@@ -56,7 +56,9 @@ public:
 
 private:
     AsyncLogger()
-      : log_path_(),
+      : opened_(false),
+        filter_level_(LogLevel::INFO),
+        log_path_(),
         log_suffix_(),
         log_file_max_lineno_(0),
         block_queue_(),
@@ -75,11 +77,12 @@ private:
 
     int appendLogLevel(char *start, int len, LogLevel level);
 
-
 private:
     static constexpr int LOG_FILE_MAX_LINE_LEN = 4096;
     static constexpr int STR_TIME_LEN = 50;
 
+    bool opened_;                    // 日志是否开启
+    LogLevel filter_level_;           // 显示的最低日志级别
     std::string log_path_;           // 日志文件存放路径
     std::string log_suffix_;         // 日志文件后缀名
     int log_file_max_lineno_;        // 单个日志文件最多存放的日志记录数目

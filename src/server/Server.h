@@ -5,6 +5,7 @@
 #include <server/Epoller.h>
 #include <http/HttpConn.h>
 #include <timer/TimerManager.h>
+#include <logger/AsyncLogger.h>
 
 #include <cstdint>
 #include <unordered_map>
@@ -14,7 +15,13 @@
 class Server
 {
 public:
-    Server(uint16_t port, int threads_num);
+    Server(uint16_t port,
+           // I/O线程池配置
+           int threads_num,
+           // 日志配置
+           bool open_log, LogLevel filter_level, const std::string &log_path,
+           const std::string &log_suffix, int file_max_line, int block_queue_size);
+
     Server(const Server &) = delete;
     Server(Server &&) = delete;
 
@@ -36,13 +43,13 @@ private:
 
 private:
     // 处理监听socket的可读事件
-    void dealListen();
+    void handleAccept();
 
     // 处理连接socket的可读事件
-    void dealRead(int sock);
+    void handleRead(int sock);
 
     // 处理连接socket的可写事件
-    void dealWrite(int sock);
+    void handleWrite(int sock);
 
 private:
     // 添加一个Http连接实例
@@ -53,10 +60,10 @@ private:
 
 private:
     // 读任务
-    void onRead(std::shared_ptr<HttpConn> p_http_conn);
+    void onRead(std::weak_ptr<HttpConn> wp_conn);
 
     // 写任务
-    void onWrite(std::shared_ptr<HttpConn> p_http_conn);
+    void onWrite(std::weak_ptr<HttpConn> wp_conn);
 
 private:
     // 服务器直接给客户端发送错误信息并关闭socket
@@ -85,6 +92,8 @@ private:
 
     uint32_t listen_epoll_events_;      // 监听socket需要监视的EPOLL事件
     uint32_t conn_epoll_events_;        // 连接socket需要监视的固定事件
+
+    mutable std::mutex lock_;
 };
 
 #endif

@@ -21,9 +21,12 @@ using std::vector;
 using std::min;
 using std::to_string;
 
-void AsyncLogger::init(const std::string &log_path, const std::string &log_suffix,
-            int file_max_line, int block_queue_size)
+void AsyncLogger::init(LogLevel filter_level, const std::string &log_path,
+                       const std::string &log_suffix, int file_max_line, int block_queue_size)
 {
+    opened_ = true;
+    filter_level_ = filter_level;
+
     log_path_ = log_path;
     log_suffix_ = log_suffix;
     log_file_max_lineno_ = file_max_line;
@@ -47,7 +50,10 @@ void AsyncLogger::init(const std::string &log_path, const std::string &log_suffi
 // 输出日志
 void AsyncLogger::log(LogLevel level, const char *fmt, ...)
 {
-
+    if(!opened_ || level < filter_level_)
+    {
+        return;
+    }
     time_t now = time(nullptr);
     struct tm log_tm;
     auto ret = localtime_r(&now, &log_tm);
