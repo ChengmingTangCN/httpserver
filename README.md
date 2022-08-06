@@ -1,5 +1,12 @@
 ## HTTP Server
 
+### 架构图
+
+![](img/httpserver架构图.png)
+
+### 功能特点
+
+
 ### 问题记录
 
 #### 利用webbench进行压测时，发现服务器进程会异常终止。
